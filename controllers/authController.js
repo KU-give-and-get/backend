@@ -3,11 +3,22 @@ import jwt from 'jsonwebtoken'
 import AuthUser from '../models/AuthUser.js'
 import { OAuth2Client } from 'google-auth-library'
 import axios from 'axios'
+import validator from 'validator'
 
 export const signup = async (req, res) => {
   const { name, email, password } = req.body
 
-  try{
+  try {
+    
+    // ตรวจสอบว่าเป็น email format ปกติ
+    if (!validator.isEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+    // ตรวจสอบว่าเป็น domain ของเกษตร
+    if (!email.endsWith("@ku.th") && !email.endsWith("@live.ku.th")) {
+        return res.status(400).json({ error: "Email must be a Kasetsart university email" });
+    }
+
     // check user is already esixt
     const existingUser = await AuthUser.findOne({ email })
     if (existingUser) {
