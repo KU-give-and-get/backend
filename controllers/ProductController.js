@@ -92,3 +92,23 @@ export const deleteProduct = async (req, res) => {
     res.status(500).json({message: 'Server error'})
   }
 }
+
+export const updateProduct = async (req, res) => {
+  try {
+    const {id} = req.params
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { ...req.body, images: req.files?.map(f => f.filename) }, // ปรับตาม model ของคุณ
+      { new: true }
+    )
+
+    if (!updateProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+    res.json(updatedProduct);
+  } catch (error) {
+    console.error("Update product error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+}
