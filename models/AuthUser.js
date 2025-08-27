@@ -6,7 +6,8 @@ const authUserSchema = new mongoose.Schema({
   password: String,
   googleId: { type: String, unique: true, sparse: true},
   provider: { type: String, enum: ['local', 'google'], required: true},
-  createdAt: {type: Date, default: Date.now}
+  createdAt: {type: Date, default: Date.now},
+  isVerified: { type: Boolean, default: false }
 });
 
 export default mongoose.model('AuthUser', authUserSchema)
