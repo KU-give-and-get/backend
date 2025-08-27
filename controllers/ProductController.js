@@ -98,7 +98,7 @@ export const updateProduct = async (req, res) => {
     const {id} = req.params
 
     const updatedProduct = await Product.findByIdAndUpdate(
-      id,
+      {_id: id},
       { ...req.body, images: req.files?.map(f => f.filename) }, // ปรับตาม model ของคุณ
       { new: true }
     )
@@ -110,5 +110,41 @@ export const updateProduct = async (req, res) => {
   } catch (error) {
     console.error("Update product error:", error);
     res.status(500).json({ message: "Server error" });
+  }
+}
+
+export const reserveProduct = async (req, res) => {
+  try {
+    const {id} = req.params
+
+    const product = await Product.findByIdAndUpdate(
+      {_id: id},
+      { status: 'reserved'},
+      {new: true}
+    )
+
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({message:'Server error'})
+  } 
+}
+
+export const updateProductStatus = async (req, res) => {
+  try {
+    const {id} = req.params
+    const {status} = req.body
+
+    const product = await Product.findOneAndUpdate(
+      { _id: id },      
+      {status},
+      {new: true}
+    )
+    if (!product) return res.status(404).json({ message: 'Product not found' });
+    res.json(product);
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({message:'Server error'})
   }
 }
