@@ -124,3 +124,33 @@ export const handleGooglePostLogin = async (req, res) => {
     res.status(401).json({ message: 'Invalid access token' });
   }
 };
+
+export const getUser = async (req, res) => {
+  try {
+    // ดึง token จาก header
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const token = authHeader.split(" ")[1];
+    if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+    // ตรวจสอบและ decode token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // decoded จะมี id และ email (ตามที่เรา sign ไว้)
+    const userId = decoded.id;
+
+    // หา user จาก DB
+    const user = await AuthUser.findById(userId).select("-password -__v"); 
+    // select เอาเฉพาะ field ที่ต้องการ แยก password ออก
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.json({ user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};

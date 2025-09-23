@@ -99,7 +99,7 @@ export const updateProduct = async (req, res) => {
 
     const updatedProduct = await Product.findByIdAndUpdate(
       {_id: id},
-      { ...req.body, images: req.files?.map(f => f.filename) }, // ปรับตาม model ของคุณ
+      { ...req.body, images: req.files?.map(f => f.filename) }, 
       { new: true }
     )
 
