@@ -14,7 +14,8 @@ const productSchema = new mongoose.Schema({
     instagram: String,
     facebook: String,
     others: String
-  }
+  },
+  quantity: {type: Number, default: 1}
 })
 
 export default mongoose.model('Product', productSchema)
