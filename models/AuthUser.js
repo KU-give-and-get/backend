@@ -8,6 +8,7 @@ const authUserSchema = new mongoose.Schema({
   provider: { type: String, enum: ['local', 'google'], required: true},
   createdAt: {type: Date, default: Date.now},
   isVerified: { type: Boolean, default: false }
+  
 });
 
 export default mongoose.model('AuthUser', authUserSchema)
