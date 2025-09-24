@@ -4,13 +4,13 @@ import Product from "../models/Product.js"
 
 export const createProduct = async (req, res) => {
   try {
-    const { name, description, category, status, location, contact } = req.body;
+    const { name, description, category, status, location, contact, quantity } = req.body;
 
     if (!name || !description || !category) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const imageUrls  = []
+    const imageUrls = [];
 
     if (req.files && req.files.length > 0) {
       for (const file of req.files) {
@@ -29,12 +29,13 @@ export const createProduct = async (req, res) => {
       name,
       description,
       category,
-      imageUrl: imageUrls, 
+      imageUrl: imageUrls,
       status: status || "available",
       location,
       contact,
       donorId: req.user.id,
       createdAt: new Date(),
+      quantity: quantity || 1,
     });
 
     await product.save();
@@ -45,6 +46,7 @@ export const createProduct = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
 
 export const getProducts = async (req, res) => {
   try {
@@ -99,7 +101,7 @@ export const updateProduct = async (req, res) => {
 
     const updatedProduct = await Product.findByIdAndUpdate(
       {_id: id},
-      { ...req.body, images: req.files?.map(f => f.filename) }, // ปรับตาม model ของคุณ
+      { ...req.body, images: req.files?.map(f => f.filename) }, 
       { new: true }
     )
 

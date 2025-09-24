@@ -5,8 +5,8 @@ const productSchema = new mongoose.Schema({
   description: String,
   category: String,
   imageUrl: [String], // array ของ URL
-  donorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, // อ้างอิงไปยัง user
-  status: { type: String, default: 'available' }, // เช่น available, donated, etc.
+  donorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true }, 
+  status: { type: String, default: 'available' },
   createdAt: { type: Date, default: Date.now },
   location: String,
   contact: {
@@ -14,7 +14,8 @@ const productSchema = new mongoose.Schema({
     instagram: String,
     facebook: String,
     others: String
-  }
+  },
+  quantity: {type: Number, default: 1}
 })
 
 export default mongoose.model('Product', productSchema)
