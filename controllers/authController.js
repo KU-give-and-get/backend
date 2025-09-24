@@ -5,6 +5,7 @@ import { OAuth2Client } from 'google-auth-library'
 import axios from 'axios'
 import validator from 'validator'
 import nodemailer from 'nodemailer';
+import cloudinary from "../config/cloudinary.js";
 
 
 const transporter = nodemailer.createTransport({
@@ -50,109 +51,111 @@ export const verifyEmail = async (req, res) => {
 
 
 export const signup = async (req, res) => {
-  const { name, email, password } = req.body
+  const { name, email, password, faculty, major, isLoan, profileImageUrl } = req.body;
 
   try {
-    
-    // ตรวจสอบว่าเป็น email format ปกติ
     if (!validator.isEmail(email)) {
       return res.status(400).json({ message: 'Invalid email format' });
     }
-    // ตรวจสอบว่าเป็น domain ของเกษตร
     if (!email.endsWith("@ku.th") && !email.endsWith("@live.ku.th")) {
-        return res.status(400).json({ message: "Email must be a Kasetsart university email" });
+      return res.status(400).json({ message: "Email must be a Kasetsart university email" });
     }
 
-    // check user is already esixt
-    const existingUser = await AuthUser.findOne({ email })
+    const existingUser = await AuthUser.findOne({ email });
     if (existingUser) {
-      return res.status(400).json({message: 'This Email is already exist'})
+      return res.status(400).json({ message: 'This Email already exists' });
     }
 
-    // encrypt
-    const salt = await bcrypt.genSalt(10)
-    const hashedPassword = await bcrypt.hash(password, salt)
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
-    const verificationToken = jwt.sign(
-      { email },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
-    // create new user
     const newUser = new AuthUser({
       name,
       email,
       password: hashedPassword,
       provider: 'local',
-      isVerified: false
-    })
+      isVerified: false,
+      faculty: faculty || "",
+      major: major || "",
+      isLoan: isLoan || false,
+      profileImageUrl: profileImageUrl || ""
+    });
 
-    await newUser.save()
+    await newUser.save();
     await sendVerificationEmail(email, verificationToken);
-    // create JWT token
-    const token = jwt.sign(
-      { id: newUser._id, email: newUser.email},
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    )
 
-    res.json({token, user:{ id: newUser._id, name: newUser.name, email: newUser.email , isVerified: newUser.isVerified }})
+    const token = jwt.sign({ id: newUser._id, email: newUser.email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    res.json({ 
+      token, 
+      user: { 
+        id: newUser._id, 
+        name: newUser.name, 
+        email: newUser.email, 
+        isVerified: newUser.isVerified,
+        faculty: newUser.faculty,
+        major: newUser.major,
+        isLoan: newUser.isLoan,
+        profileImageUrl: newUser.profileImageUrl
+      } 
+    });
 
   } catch (error) {
-    res.status(500).json({ message: 'Server error:' + error})
+    res.status(500).json({ message: 'Server error: ' + error });
   }
+};
 
-}
+export const login = async (req, res) => {
+  const { email, password } = req.body;
 
-export const login  = async (req, res) => {
-  const  { email, password } = req.body
   try {
-    const user = await AuthUser.findOne({email})
-    if (!user) return res.status(400).json({ message: 'User not found' })
+    const user = await AuthUser.findOne({ email });
+    if (!user) return res.status(400).json({ message: 'User not found' });
 
-    const hashedPassword = user.password;
-    
-    const isMatch  = await bcrypt.compare(password, hashedPassword)
-    if (!isMatch) return res.status(400).json({ message: 'Incorrect password' })
-    const token = jwt.sign(
-      { id: user._id, email: user.email},
-      process.env.JWT_SECRET,
-      {expiresIn: '1d'}
-    )
-    if(user.isVerified === false){
-      const verificationToken = jwt.sign(
-      { email },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: 'Incorrect password' });
+
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1d' });
+
+    if (!user.isVerified) {
+      const verificationToken = jwt.sign({ email }, process.env.JWT_SECRET, { expiresIn: '1d' });
       await sendVerificationEmail(email, verificationToken);
     }
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, isVerified: user.isVerified }
-    })
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        isVerified: user.isVerified,
+        faculty: user.faculty,
+        major: user.major,
+        isLoan: user.isLoan,
+        profileImageUrl: user.profileImageUrl
+      }
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Server error' + error})
-  } 
-}
+    res.status(500).json({ message: 'Server error: ' + error });
+  }
+};
 
 export const handleGooglePostLogin = async (req, res) => {
   const { accessToken } = req.body;
   if (!accessToken) return res.status(400).json({ message: 'accessToken is required' });
 
   try {
-    // ดึงข้อมูล user จาก Google ด้วย accessToken
     const response = await axios.get('https://www.googleapis.com/oauth2/v3/userinfo', {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
     const payload = response.data;
     if (!payload.email.endsWith("@ku.th") && !payload.email.endsWith("@live.ku.th")) {
-        return res.status(400).json({ message: "Email must be a Kasetsart university email" });
+      return res.status(400).json({ message: "Email must be a Kasetsart university email" });
     }
-    // หา user ใน DB
+
     let user = await AuthUser.findOne({ email: payload.email });
     if (!user) {
       user = new AuthUser({
@@ -160,25 +163,31 @@ export const handleGooglePostLogin = async (req, res) => {
         email: payload.email,
         googleId: payload.sub,
         provider: 'google',
-        isVerified: true
+        isVerified: true,
+        faculty: "",
+        major: "",
+        isLoan: false,
+        profileImageUrl: payload.picture || ""
       });
       await user.save();
-    }
-    if(user.isVerified === false){
+    } else if (!user.isVerified) {
       user.isVerified = true;
       await user.save();
     }
 
-    // สร้าง JWT ของระบบเรา
-    const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
-      { expiresIn: '1d' }
-    );
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET, { expiresIn: '1d' });
 
     res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email }
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        faculty: user.faculty,
+        major: user.major,
+        isLoan: user.isLoan,
+        profileImageUrl: user.profileImageUrl
+      }
     });
   } catch (error) {
     console.error(error);
@@ -188,7 +197,6 @@ export const handleGooglePostLogin = async (req, res) => {
 
 export const getUser = async (req, res) => {
   try {
-    // ดึง token จาก header
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -197,21 +205,60 @@ export const getUser = async (req, res) => {
     const token = authHeader.split(" ")[1];
     if (!token) return res.status(401).json({ message: "Unauthorized" });
 
-    // ตรวจสอบและ decode token
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    
-    // decoded จะมี id และ email (ตามที่เรา sign ไว้)
     const userId = decoded.id;
 
-    // หา user จาก DB
-    const user = await AuthUser.findById(userId).select("-password -__v"); 
-    // select เอาเฉพาะ field ที่ต้องการ แยก password ออก
-
+    const user = await AuthUser.findById(userId).select("-password -__v");
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.json({ user });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+export const editProfile = async (req, res) => {
+  try {
+    const { name, faculty, major, isLoan } = req.body;
+
+    if (!name || !faculty || !major) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    let profileImageUrl;
+
+    // อัปโหลดรูปใหม่ถ้ามี
+    if (req.file) {
+      const b64 = req.file.buffer.toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      const uploadRes = await cloudinary.uploader.upload(dataURI, {
+        folder: "profile",
+      });
+
+      profileImageUrl = uploadRes.secure_url;
+    }
+
+    // อัปเดตข้อมูล user
+    const updatedUser = await AuthUser.findByIdAndUpdate(
+      req.user.id, 
+      {
+        name,
+        faculty,
+        major,
+        isLoan,
+        ...(profileImageUrl && { profileImageUrl }), 
+      },
+      { new: true }
+    ).select("-password -__v");
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Edit profile error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
