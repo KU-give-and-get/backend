@@ -120,6 +120,14 @@ export const login  = async (req, res) => {
       process.env.JWT_SECRET,
       {expiresIn: '1d'}
     )
+    if(user.isVerified === false){
+      const verificationToken = jwt.sign(
+      { email },
+      process.env.JWT_SECRET,
+      { expiresIn: '1d' }
+    );
+      await sendVerificationEmail(email, verificationToken);
+    }
 
     res.json({
       token,
