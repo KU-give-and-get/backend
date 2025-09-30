@@ -14,7 +14,8 @@ const wishItemSchema = new mongoose.Schema({
     facebook: String,
     others: String
   },
-  quantity: { type: Number, required: true, default: 1 }
+  quantity: { type: Number, required: true, default: 1 },
+  imageUrl: {type: String},
 });
 
 export default mongoose.model('WishItem', wishItemSchema);

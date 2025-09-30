@@ -1,12 +1,26 @@
 import WishItem from "../models/WishItem.js";
+import { v2 as cloudinary } from "cloudinary";
 
-// ✅ Create WishItem
 export const createWishItem = async (req, res) => {
   try {
     const { name, description, category, status, location, contact, quantity } = req.body;
 
     if (!name || !description || !category || !quantity) {
       return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    let imageUrl = null;
+
+    // ✅ handle single image upload
+    if (req.file) {
+      const b64 = req.file.buffer.toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      const uploadRes = await cloudinary.uploader.upload(dataURI, {
+        folder: "wishItems", // แยกโฟลเดอร์กับ product
+      });
+
+      imageUrl = uploadRes.secure_url;
     }
 
     const wishItem = new WishItem({
@@ -17,11 +31,13 @@ export const createWishItem = async (req, res) => {
       location,
       contact,
       quantity,
-      recipientId: req.user.id, // ผู้รับบริจาคคือ user ที่ล็อกอิน
+      recipientId: req.user.id, // ผู้รับคือ user ที่ล็อกอิน
+      imageUrl, // ✅ เก็บ url เดียว
       createdAt: new Date(),
     });
 
     await wishItem.save();
+
     res.status(201).json(wishItem);
   } catch (error) {
     console.error("Create wish item error:", error);
@@ -78,16 +94,27 @@ export const deleteWishItem = async (req, res) => {
   }
 };
 
-// ✅ Update WishItem
+// ✅ Update WishItem (รวมอัพโหลดรูปใหม่)
 export const updateWishItem = async (req, res) => {
   try {
     const { id } = req.params;
+    let updateData = { ...req.body };
 
-    const updatedWishItem = await WishItem.findByIdAndUpdate(
-      { _id: id },
-      { ...req.body },
-      { new: true }
-    );
+    // ถ้ามีการอัพโหลดไฟล์ใหม่ → อัพไป Cloudinary
+    if (req.file) {
+      const b64 = req.file.buffer.toString("base64");
+      const dataURI = `data:${req.file.mimetype};base64,${b64}`;
+
+      const uploadRes = await cloudinary.uploader.upload(dataURI, {
+        folder: "wishItems",
+      });
+
+      updateData.imageUrl = uploadRes.secure_url;
+    }
+
+    const updatedWishItem = await WishItem.findByIdAndUpdate(id, updateData, {
+      new: true,
+    });
 
     if (!updatedWishItem) {
       return res.status(404).json({ message: "WishItem not found" });
@@ -111,7 +138,8 @@ export const updateWishItemStatus = async (req, res) => {
       { new: true }
     );
 
-    if (!wishItem) return res.status(404).json({ message: "WishItem not found" });
+    if (!wishItem)
+      return res.status(404).json({ message: "WishItem not found" });
 
     res.json(wishItem);
   } catch (error) {

@@ -9,10 +9,11 @@ import {
   updateWishItem,
   updateWishItemStatus
 } from '../controllers/wishItemController.js';
+import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
-router.post("/", verifyToken, createWishItem);
+router.post("/", verifyToken, upload.single("image"), createWishItem);
 
 router.get("/", getWishItems);
 
@@ -22,7 +23,7 @@ router.patch("/:id/status", verifyToken, updateWishItemStatus);
 
 router.get("/:id", getWishItemById);
 
-router.put("/:id", verifyToken, updateWishItem);
+router.put("/:id",upload.single("image"),verifyToken, updateWishItem);
 
 router.delete("/:id", verifyToken, deleteWishItem);
 
