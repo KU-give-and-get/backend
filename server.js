@@ -10,6 +10,7 @@ import messageRoutes from './routes/messageRoutes.js'
 import connectCloudinary from './config/cloudinary.js'
 import wishItemRoutes from './routes/wishItemRoutes.js'
 import { initSocket } from './config/socket.js'
+import reservationRoutes from './routes/reservationRoutes.js'
 
 // create app
 const app = express()
@@ -24,6 +25,7 @@ app.use('/api/products', productRoutes)
 app.use('/api/conversations', convoRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/wishitems', wishItemRoutes)
+app.use("/api/reservations", reservationRoutes);
 
 app.get('/',(req, res) => {
   res.send("API Working")
