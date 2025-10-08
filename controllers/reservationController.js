@@ -29,7 +29,7 @@ export const getReservationsByProduct = async (req, res) => {
     const { productId } = req.params;
 
     const reservations = await Reservation.find({ productId })
-      .populate("requesterId", "name email") // populate user
+      .populate("requesterId", "name email profileImageUrl") // populate user
       .sort({ createdAt: -1 });
 
     res.json(reservations);
