@@ -261,4 +261,49 @@ export const editProfile = async (req, res) => {
     console.error("Edit profile error:", error);
     res.status(500).json({ message: "Server error" });
   }
+  
+};
+export const resetPassword = async (req, res) => {
+      const { token, password } = req.body;
+      
+      try {
+          const decoded = jwt.verify(token, process.env.JWT_SECRET);
+          const user = await AuthUser.findOne({ email: decoded.email });
+          if (!user) {
+              return res.status(404).json({ message: 'User not found' });
+          }
+          const salt = await bcrypt.genSalt(10);
+          const hashedPassword = await bcrypt.hash(password, salt);
+          if (hashedPassword === user.password) {
+              return res.status(400).json({ message: 'New password must be different from the old password' });
+          }
+          user.password = hashedPassword;
+          await user.save();
+          res.status(200).json({ message: 'Password reset successfully' });
+      } catch (error) {
+          res.status(500).json({ message: 'Server error : ' + error });
+      }
+};
+export const sendResetPasswordLink = async (req, res) => {
+      const { email } = req.body;
+      try {
+          const user = await AuthUser.findOne({ email });
+          if (!user) {
+              return res.status(404).json({ message: 'User not found' });
+          }
+          const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '5m' });
+          const url = `${process.env.FRONTEND_URL}/reset-password/${token}`;
+          let info = await transporter.sendMail({
+              from: process.env.EMAIL_USER,
+              to: email,
+              subject: "Reset your password",
+              html: `<p>Click the link below to reset your password:</p>
+                     <a href="${url}">${url}</a>`
+          });
+          console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+          res.status(200).json({ message: 'Password reset link sent to your email' });
+      } catch (error) {
+          res.status(500).json({ message: 'Server error : ' + error });
+      }
+
 };

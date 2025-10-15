@@ -1,5 +1,5 @@
 import express from 'express';
-import { editProfile, getUser, handleGooglePostLogin, login, signup, verifyEmail } from '../controllers/authController.js';
+import { editProfile, getUser, handleGooglePostLogin, login, signup, verifyEmail, sendResetPasswordLink, resetPassword } from '../controllers/authController.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 import upload from '../middleware/multer.js';
 
@@ -11,6 +11,8 @@ router.post('/google', handleGooglePostLogin);
 router.get('/verify-email/:token', verifyEmail);
 router.put('/edit-profile', verifyToken, upload.single("profileImage"), editProfile);
 router.get('/me', verifyToken, getUser);
+router.post('/send-reset-password-link', sendResetPasswordLink);
+router.post('/reset-password', resetPassword);
 
 
 
