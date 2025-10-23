@@ -9,6 +9,9 @@ export const createReservation = async (req, res) => {
 
     const product = await Product.findById(productId);
     if (!product) return res.status(404).json({ message: "Product not found" });
+    if (product.donorId.toString() === requesterId) {
+      return res.status(400).json({ message: "Cannot reserve your own product" });
+    }
 
     const reservation = await Reservation.create({
       productId,
@@ -28,6 +31,11 @@ export const getReservationsByProduct = async (req, res) => {
   try {
     const { productId } = req.params;
 
+    const product = await Product.findById(productId);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    if (product.donorId.toString() !== req.user.id) {
+      return res.status(403).json({ message: "Not authorized to view reservations for this product" });
+    }
     const reservations = await Reservation.find({ productId })
       .populate("requesterId", "name email profileImageUrl") // populate user
       .sort({ createdAt: -1 });
