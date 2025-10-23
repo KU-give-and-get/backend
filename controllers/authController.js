@@ -274,7 +274,7 @@ export const resetPassword = async (req, res) => {
           }
           const salt = await bcrypt.genSalt(10);
           const hashedPassword = await bcrypt.hash(password, salt);
-          if (bcrypt.compare(password, user.password)) {
+          if (await bcrypt.compare(password, user.password)) {
               return res.status(400).json({ message: 'New password must be different from the old password' });
           }
           user.password = hashedPassword;
