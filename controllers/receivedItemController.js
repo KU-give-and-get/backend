@@ -7,12 +7,14 @@ import AuthUser from '../models/AuthUser.js'
 // เพิ่ม received item
 export const createReceivedItem = async (req, res) => {
   try {
-    const { reservationId, quantity } = req.body;
-    const receiverId = req.user.id; // middleware verifyToken ต้องมี user
+    const { reservationId, quantity } = req.body; // middleware verifyToken ต้องมี user
 
     // หา reservation
     const reservation = await Reservation.findById(reservationId);
     if (!reservation) return res.status(404).json({ message: "Reservation not found" });
+
+    // ดึง requesterId
+    const receiverId = reservation.requesterId._id; // ✅ ใช้ requesterId แทน receiverId
 
     // เช็ค quantity
     if (quantity > reservation.requestedQuantity)
