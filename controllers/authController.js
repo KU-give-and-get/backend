@@ -50,7 +50,7 @@ export const verifyEmail = async (req, res) => {
 
 
 
-export const signup = async (req, res) => {
+export const signUp = async (req, res) => {
   const { name, email, password, faculty, major, isLoan, profileImageUrl } = req.body;
 
   try {
@@ -290,6 +290,9 @@ export const sendResetPasswordLink = async (req, res) => {
           const user = await AuthUser.findOne({ email });
           if (!user) {
               return res.status(404).json({ message: 'User not found' });
+          }
+          if(user.provider === 'google') {
+              return res.status(400).json({ message: 'User registered via Google OAuth cannot reset password' });
           }
           const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET, { expiresIn: '5m' });
           const url = `${process.env.FRONTEND_URL}/reset-password/${token}`;
