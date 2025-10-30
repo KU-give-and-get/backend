@@ -55,27 +55,45 @@ export const updateReservationStatus = async (req, res) => {
     const reservation = await Reservation.findById(reservationId);
     if (!reservation) return res.status(404).json({ message: "Reservation not found" });
 
-    // ถ้า approve ลด quantity ของ product
-    if (status === "approved") {
-      const product = await Product.findById(reservation.productId);
-      if (!product) return res.status(404).json({ message: "Product not found" });
+    const product = await Product.findById(reservation.productId);
+    if (!product) return res.status(404).json({ message: "Product not found" });
 
+    if (status === "approved") {
+      // ✅ ถ้าของไม่พอ
       if (product.quantity < reservation.requestedQuantity) {
-        return res.status(400).json({ message: "Not enough quantity" });
+        reservation.status = "rejected";
+        await reservation.save();
+
+        // ✅ Reject คำขออื่นๆ ที่ยัง pending ทั้งหมด
+        await Reservation.updateMany(
+          { productId: reservation.productId, status: "pending" },
+          { $set: { status: "rejected" } }
+        );
+
+        return res.json({ message: "Not enough stock. Rejecting all pending requests.", status: "rejected" });
       }
 
+      // ✅ อนุมัติได้ → ลดจำนวนสินค้า
       product.quantity -= reservation.requestedQuantity;
       await product.save();
+
+      reservation.status = "approved";
+      await reservation.save();
+
+      return res.json({ message: "Approved successfully", status: "approved" });
     }
 
-    reservation.status = status;
+    // ✅ Reject ปกติ
+    reservation.status = "rejected";
     await reservation.save();
+    return res.json({ message: "Rejected successfully", status: "rejected" });
 
-    res.json(reservation);
   } catch (err) {
+    console.error("Update reservation error:", err);
     res.status(500).json({ message: err.message });
   }
 };
+
 
 // ดู reservation ของ user
 export const getReservationsByUser = async (req, res) => {
